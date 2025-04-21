@@ -1,0 +1,289 @@
+[project]
+name = "travelmind"
+version = "1.0.0"
+description = "TravelMind - AI-powered travel planning system with multi-stage RLHF and advanced RAG capabilities"
+authors = [
+    {name = "Frank Chen", email = "frank@example.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+homepage = "https://github.com/1998frankchen/TravelMind"
+repository = "https://github.com/1998frankchen/TravelMind"
+documentation = "https://github.com/1998frankchen/TravelMind/blob/main/README.md"
+keywords = [
+    "travel",
+    "ai",
+    "planning",
+    "rlhf",
+    "rag",
+    "qwen",
+    "transformer",
+    "language-model",
+    "multimodal"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+
+dependencies = [
+    # Core ML frameworks
+    "torch==2.5.1",
+    "transformers==4.49.0",
+    "datasets==3.2.0",
+    "accelerate==1.2.1",
+    # Model optimization
+    "peft==0.14.0",
+    "bitsandbytes==0.45.0",
+    "deepspeed==0.16.2",
+    # Reinforcement learning
+    "trl==0.13.0",
+    # RAG and vector databases
+    "langchain==0.3.23",
+    "langchain-community==0.3.21",
+    "langchain-core==0.3.51",
+    "langchain-openai==0.3.12",
+    "langchain-text-splitters==0.3.8",
+    "chromadb==0.6.3",
+    # Web frameworks
+    "gradio==5.23.3",
+    "streamlit==1.42.0",
+    "fastapi==0.115.12",
+    "uvicorn==0.34.0",
+    "langserve==0.3.1",
+    # Data processing
+    "pandas==2.2.3",
+    "numpy==2.2.4",
+    "scipy==1.15.2",
+    "scikit-learn==1.6.1",
+    "beautifulsoup4==4.13.3",
+    # NLP tools
+    "jieba==0.42.1",
+    "regex==2024.11.6",
+    # Evaluation and metrics
+    "evaluate==0.4.3",
+    # Visualization
+    "matplotlib==3.10.1",
+    "graphviz==0.20.3",
+    # System and monitoring
+    "psutil==6.1.1",
+    "pynvml==12.0.0",
+    "nvidia-ml-py==12.560.30",
+    "swanlab==0.5.5",
+    # API clients
+    "openai==1.70.0",
+    "zhipuai==2.1.5.20250106",
+    "modelscope==1.24.1",
+    # Utilities
+    "pydantic==2.11.2",
+    "PyYAML==6.0.2",
+    "Requests==2.32.3",
+    "tqdm==4.67.1",
+    "safetensors==0.5.3",
+    "huggingface-hub>=0.28.1",
+    # Audio processing (optional)
+    "sounddevice==0.5.1",
+    "whisper==1.1.10",
+    "rouge-score>=0.1.2",
+    "bert-score>=0.3.13",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "bitsandbytes==0.45.0",
+    "deepspeed==0.16.2",
+    "flash-attn>=2.5.0",
+]
+
+web = [
+    "gradio==5.23.3",
+    "streamlit==1.42.0",
+    "fastapi==0.115.12",
+    "uvicorn==0.34.0",
+]
+
+api = [
+    "openai==1.70.0",
+    "zhipuai==2.1.5.20250106",
+    "langserve==0.3.1",
+]
+
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "pytest-asyncio",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autodoc-typehints",
+]
+
+[project.scripts]
+travelmind = "main:main"
+travelmind-train = "main:train"
+travelmind-web = "main:use_rag_web_demo"
+travelmind-rag = "main:use_rag"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "src/**/*.py",
+    "configs/**/*.yaml",
+    "configs/**/*.json",
+    "README.md",
+    "LICENSE",
+]
+exclude = [
+    "tests/**/*",
+    "docs/**/*",
+    "models/**/*",
+    "data/**/*",
+    "output/**/*",
+    "runs/**/*",
+    "wandb/**/*",
+    ".venv/**/*",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | models
+  | data
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+skip_glob = ["**/venv/**", "**/models/**", "**/data/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--disable-warnings",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+exclude = [
+    "venv/",
+    "build/",
+    "dist/",
+    "models/",
+    "data/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "transformers.*",
+    "torch.*",
+    "peft.*",
+    "datasets.*",
+    "langchain.*",
+    "chromadb.*",
+    "gradio.*",
+    "streamlit.*",
+    "trl.*",
+    "accelerate.*",
+    "deepspeed.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "models",
+    "data",
+    "__pycache__",
+]
