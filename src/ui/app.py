@@ -6,7 +6,6 @@ from .mindmap import generate_mindmap
 import re
 
 '''
-
 Example: How do I travel from Shanghai to Paris?
 '''
 

@@ -150,8 +150,6 @@ class CorrectiveRAG:
  
 if __name__ == "__main__":  
     corpus = [  
-        "蝙蝠侠（1989Year电影）的编剧Yes/IsSam Hamm...",    
-        "亨利·费尔登Yes/Is英国保守党政治家...",    
         # Add更多Documentation...    
     ]  
     

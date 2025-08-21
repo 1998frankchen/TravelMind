@@ -456,7 +456,6 @@ def monitor_system_resources():
     
 def get_model_name_using_model(model):
     '''
-    
     use the model object's config file to retrieve the model name, e.g. bert-base-uncased
     '''
     

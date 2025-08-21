@@ -1,7 +1,7 @@
 import os
 from typing import List, Optional, Dict, Literal, Tuple, Any
-from langchain_core.documents import Document  
-from langchain.text_splitter import CharacterTextSplitter 
+from langchain_core.documents import Document
+from langchain.text_splitter import CharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.chains.llm import LLMChain
@@ -10,7 +10,7 @@ from langchain.chains.llm import LLMChain
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings  
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.schema.output_parser import StrOutputParser
 from langchain_community.document_loaders.pdf import PyPDFLoader
 from langchain.vectorstores.utils import filter_complex_metadata
@@ -26,7 +26,7 @@ from src.agents.chat_pdf import ChatPDF
 
 
 class MemoryBase:
-    
+
     def __init__(self):
         pass
     async def _call_model(self, prompt: ChatPromptTemplate, inputs: Dict, model_type: Literal["api", "huggingface"]) -> str:
@@ -46,7 +46,7 @@ class MemoryBase:
                 tokenizer=tokenizer,
                 max_new_tokens=200,
             )
-            
+
             model = HuggingFacePipeline(pipeline=pipe)
             chain = LLMChain(llm=model, prompt=prompt)
             return await chain.arun(inputs)
@@ -62,8 +62,8 @@ class MemoryTreeNode():
         self.children = children or []
         self.parent = None
         self.id = id
-        
-        
+
+
     def print_node_info(self):
         print(f"Node_id: {self.id} Node Level: {self.level}, Content[:25]: {self.content[:25]}...")
         print(f"Children Count: {len(self.children)}")
@@ -75,19 +75,13 @@ class MemoryTreeBuilder(MemoryBase):
     def __init__(self, chunk_size=1000, max_children=5):
         self.chunk_size = chunk_size
         self.max_children = max_children
-        
-    async def build_tree(self, chunks: List[Document], model_type: str) -> MemoryTreeNode:
-        '''
-        
-        
-        return Root Node
-        '''
 
+    async def build_tree(self, chunks: List[Document], model_type: str) -> MemoryTreeNode:
         # chunks = self._chunk_text(text)
-        
-        # Build leaf nodes  
+
+        # Build leaf nodes
         leaf_nodes = await self._create_leaf_nodes(chunks, model_type)
-        
+
         # Recursively build upper layer nodes
         current_level = leaf_nodes
         level = 1
@@ -105,27 +99,27 @@ class MemoryTreeBuilder(MemoryBase):
         return current_level[0]
 
     def _chunk_text(self, text: str) -> List[Document]:
-        text_splitter = CharacterTextSplitter(chunk_size=self.chunk_size)  
-        return text_splitter.split_text(text)  
+        text_splitter = CharacterTextSplitter(chunk_size=self.chunk_size)
+        return text_splitter.split_text(text)
 
     async def _create_leaf_nodes(self, chunks: List[Document], model_type: Literal["api", "huggingface"]) -> List[MemoryTreeNode]:
         nodes = []
         for idx, chunk in enumerate(chunks):
-            
-            # Encapsulation一个大的 PromptTemplate  
-            leaf_summary_prompt = """  
-            [TEXT OF SEGMENT] 
+
+            # Encapsulation一个大的 PromptTemplate
+            leaf_summary_prompt = """
+            [TEXT OF SEGMENT]
             {text}
-            
-            Summarize the above text comprehensively into a fluent passage.   
-            Ensure the summary captures the main ideas and key details of the segment,   
-            while remaining concise and coherent.  
-            """  
-            
+
+            Summarize the above text comprehensively into a fluent passage.
+            Ensure the summary captures the main ideas and key details of the segment,
+            while remaining concise and coherent.
+            """
+
             leaf_summary_prompt = ChatPromptTemplate.from_template(
                 leaf_summary_prompt
             )
-            
+
             summary = await self._call_model(
                 prompt=leaf_summary_prompt,
                 inputs={"text": chunk},
@@ -136,193 +130,182 @@ class MemoryTreeBuilder(MemoryBase):
 
     async def _summarize_nodes(self, nodes: List[MemoryTreeNode], model_type: str) -> str:
         combined = "\n\n".join([n.content for n in nodes])
-        
-        parent_summary_prompt = """  
-        [SUMMARIES]  
+
+        parent_summary_prompt = """
+        [SUMMARIES]
         {summaries}
-        Compress the above summaries into a much shorter summary.   
-        Ensure the compressed summary retains the key information from all child summaries,   
-        while being concise and coherent.  
-        """  
-        
-        
+        Compress the above summaries into a much shorter summary.
+        Ensure the compressed summary retains the key information from all child summaries,
+        while being concise and coherent.
+        """
+
+
         parent_summary_prompt=ChatPromptTemplate.from_template(
                 parent_summary_prompt
         )
-        
-        
+
+
         return await self._call_model(
             prompt=parent_summary_prompt,
             inputs={"summaries": combined},
             model_type=model_type
         )
-        
-        
-        
+
+
+
     def print_memory_tree(self, node: MemoryTreeNode = None, indent: str = ""):
-        """Recursively print memory tree structure"""  
+        """Recursively print memory tree structure"""
         if node is None:
             return
-            
-        # Print current node content  
-        print(f"{indent}Level {node.level}: [first 50 chars] {node.content[:50]}...")  
-        
-        # Recursively print child nodes  
+
+        # Print current node content
+        print(f"{indent}Level {node.level}: [first 50 chars] {node.content[:50]}...")
+
+        # Recursively print child nodes
         for child in node.children:
             self.print_memory_tree(child, indent + "    ")
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
 
 class ParseError(Exception):
-    """Format error that occurs when parsing response"""    
-    pass  
+    """Format error that occurs when parsing response"""
+    pass
 
 class InvalidAction(Exception):
-    """Invalid action directive"""    
-    pass  
-
-
-
-
-
-
-
+    """Invalid action directive"""
+    pass
 
 
 class Navigator(MemoryBase):
     def __init__(self, model_type: str = "api"):
         self.model_type = model_type
         self.working_memory = []
-        
-        self.max_retries = 3  
-        self.error_count = 0  
-        self.visited = set()  # Record visited nodes    
-        self.path_stack = []  # Path backtracking stack    
-        
-        # Initialize triage prompt template  
+
+        self.max_retries = 3
+        self.error_count = 0
+        self.visited = set()  # Record visited nodes
+        self.path_stack = []  # Path backtracking stack
+
+        # Initialize triage prompt template
         self.triage_prompt = ChatPromptTemplate.from_template("""
         The following passage(s) are the summaries of the different parts of a story.
-        
-        
+
+
         To answer the question: {query}
-        Which of the following summary is MOST LIKELY to contain information about the answer? 
+        Which of the following summary is MOST LIKELY to contain information about the answer?
         First provide reasoning to compare the summaries before you make the decision.
         Format: Reasoning:... Action: [number]
-        
+
         {summaries}
-        
-        
-        Relpy with the passage number as your action. 
-        You MUST choose one summary number and you should reply with the following format: 
-        ################################### 
-        Reasoning: ... 
-        Action: 0 / 1 / 2, ... 
+
+
+        Relpy with the passage number as your action.
+        You MUST choose one summary number and you should reply with the following format:
         ###################################
-        
-        
+        Reasoning: ...
+        Action: 0 / 1 / 2, ...
+        ###################################
+
+
         """)
-        
+
         self.leaf_prompt = ChatPromptTemplate.from_template("""
         Read the text in triple quotes and answer a question:
         [Working Memory] {working_memory}
-        
+
         Main Text: {text}
         Can this answer the query? {query}
-        
-        
-        Format: Reasoning:... Action: -1/-2 Answer: [optional] 
-        
-        
-        If the answer CANNOT be inferred from the text above, reply with action -1. 
-        If the answer CAN be inferred from the text above, reply with action -2, and also provide your reasoning, and the final answer. 
-        You are ONLY allowed to reply with action -2 or -1. 
-        Your should reply with the following format: 
-        ################################### 
-        Reasoning: ... 
-        Action: -2 or -1 
-        Answer: (A) ... 
+
+
+        Format: Reasoning:... Action: -1/-2 Answer: [optional]
+
+
+        If the answer CANNOT be inferred from the text above, reply with action -1.
+        If the answer CAN be inferred from the text above, reply with action -2, and also provide your reasoning, and the final answer.
+        You are ONLY allowed to reply with action -2 or -1.
+        Your should reply with the following format:
+        ###################################
+        Reasoning: ...
+        Action: -2 or -1
+        Answer: (A) ...
         ###################################
         """)
-        
-        # -2 represents hit text, -1 represents miss, need to backtrack  
+
+        # -2 represents hit text, -1 represents miss, need to backtrack
 
     async def navigate(self, root: MemoryTreeNode, query: str) -> str:
         current_node = root
         while True:
-            if self.error_count >= self.max_retries:  
-                return "no answer" 
-             
+            if self.error_count >= self.max_retries:
+                return "no answer"
+
             if current_node.level == 0:  # Leaf node
                 response = await self._handle_leaf(current_node, query)
-                
+
                 print("Leaf Node")
                 current_node.print_node_info()
                 print("leaf-node-response: ", response)
-                # if "Answer:" in response:
-                #     return response.split("Answer:")[-1].strip()
-                # else:
-                #     current_node = current_node.parent # 如果找不到Answer就回溯  
-                
-                try:  
-                    reasoning, action, answer = self._parse_leaf(response)  
-                    if action == -2:  
-                        return answer  
-                    elif action == -1:  
-                        # Paper section 3.2: Backoff to parent node and mark current node as visited    
-                        self.visited.add(current_node)  
-                        if not self.path_stack:  # Root node cannot continue backtracking    
-                            return "no answer"  
-                        current_node, sibling_nodes = self.path_stack.pop()  
-                        # Find unvisited child nodes (Paper Table 1 example)    
-                        next_node = self._find_unvisited_child(sibling_nodes)  
-                        if next_node:  
-                            current_node = next_node  
-                        else:   # 所有子Node均已访问过，先让当前Node停留在父Node，Down/Below一轮再去找父Node的父Node的未访问的子Node  
-                            continue  # Continue回溯    
-                except ParseError:  
-                    self.error_count += 1  
-                
+
+                try:
+                    reasoning, action, answer = self._parse_leaf(response)
+                    if action == -2:
+                        return answer
+                    elif action == -1:
+                        # Paper section 3.2: Backoff to parent node and mark current node as visited
+                        self.visited.add(current_node)
+                        if not self.path_stack:  # Root node cannot continue backtracking
+                            return "no answer"
+                        current_node, sibling_nodes = self.path_stack.pop()
+                        # Find unvisited child nodes (Paper Table 1 example)
+                        next_node = self._find_unvisited_child(sibling_nodes)
+                        if next_node:
+                            current_node = next_node
+                        else:   # 所有子Node均已访问过，先让当前Node停留在父Node，Down/Below一轮再去找父Node的父Node的未访问的子Node
+                            continue  # Continue回溯
+                except ParseError:
+                    self.error_count += 1
+
             else:  # Non-leaf node
-                response = await self._handle_triage(current_node, query) 
-                
+                response = await self._handle_triage(current_node, query)
+
                 print("Non-Leaf Node")
                 current_node.print_node_info()
                 print("non-leaf-node-response: ", response)
-            
+
                 try:
                     reasoning, action = self._parse_triage(response)
                     self._save_work_memory(current_node, action)
 
-                    # if current_node in self.visited:  
-                    #     # 论文4.3节：已访问Node直接回溯    
-                    #     continue  
-                    
-                    # 记录当前Node和所有子Node（论文3.2节Navigate机制）    
-                    self.path_stack.append( (current_node, current_node.children) )  
-                    
-                    # response = await self._handle_triage(current_node, query)  
-                    # try:  
-                    # reasoning, action = self._parse_triage(response)  
-                    chosen_node = current_node.children[action]  
-                    if chosen_node in self.visited:  # 已经访问过了，需要Backoff  
-                        raise InvalidAction  
-                    current_node = chosen_node  # 访问选Medium的子Node  
-                except (InvalidAction):  
-                    # 回溯到父Node  
-                    current_node, sibling_nodes = self.path_stack.pop()  
-                    print(f"回溯：current_node = {current_node}")  
-                    current_node = self._find_unvisited_child(sibling_nodes)  
-                
+                    # if current_node in self.visited:
+                    #     # 论文4.3节：已访问Node直接回溯
+                    #     continue
+
+                    # 记录当前Node和所有子Node（论文3.2节Navigate机制）
+                    self.path_stack.append( (current_node, current_node.children) )
+
+                    # response = await self._handle_triage(current_node, query)
+                    # try:
+                    # reasoning, action = self._parse_triage(response)
+                    chosen_node = current_node.children[action]
+                    if chosen_node in self.visited:  # 已经访问过了，需要Backoff
+                        raise InvalidAction
+                    current_node = chosen_node  # 访问选Medium的子Node
+                except (InvalidAction):
+                    # 回溯到父Node
+                    current_node, sibling_nodes = self.path_stack.pop()
+                    print(f"回溯：current_node = {current_node}")
+                    current_node = self._find_unvisited_child(sibling_nodes)
+
                 except ParseError:
-                    # 论文4.4节：Wrong/ErrorResume机制    
-                    self.error_count += 1  
-                    if self.error_count >= self.max_retries:  
-                        return "no answer"  
-                    
+                    # 论文4.4节：Wrong/ErrorResume机制
+                    self.error_count += 1
+                    if self.error_count >= self.max_retries:
+                        return "no answer"
+
 
     async def _handle_triage(self, node: MemoryTreeNode, query: str) -> MemoryTreeNode:
         summaries = {i: child.content for i, child in enumerate(node.children)}
@@ -333,202 +316,146 @@ class Navigator(MemoryBase):
         )
         # ParseResponse
         # action = int(response.split("Action:")[-1].strip())
-        # self.working_memory.append(node.children[action].content[:200])  # Save工作记忆  
+        # self.working_memory.append(node.children[action].content[:200])  # Save工作记忆
         # return node.children[action]
-        
+
         return response
 
     async def _handle_leaf(self, node: MemoryTreeNode, query: str) -> str:
         response = await self._call_model(
             prompt=self.leaf_prompt,
             inputs={
-                "working_memory": "\n".join(self.working_memory[-3:]),  # 保留最近3条记忆  
+                "working_memory": "\n".join(self.working_memory[-3:]),  # 保留最近3条记忆
                 "text": node.content,
                 "query": query
             },
             model_type=self.model_type
         )
         return response
-    
-    
+
+
     def _parse_triage(self, response:str)->Tuple[str,str]:
-        """  
-        Parse非叶NodeResponse，Return/Back(reasoning, action)    
-        符合论文Medium"Action must be a valid child index"的Requirement    
-        
-        return (reasoning:str, action:int)
-        """  
-        # MatchFormat化的Response块    
-        match = re.search(  
-            r"Reasoning:\s*(?P<reasoning>.+?)\s*Action:\s*(?P<action>\d+)\s*",  
-            response,  
-            re.DOTALL  
-        )  
-        
-        if not match:  
-            raise ParseError(f"Invalid triage response format:\n{response}")  
-            
-        action_str = match.group("action").strip()  
-        if not action_str.isdigit():  
-            raise ParseError(f"Non-numeric action: {action_str}")  
-            
-        return (  
-            match.group("reasoning").strip(),  
-            int(action_str)  
-        )    
-    
+        # MatchFormat化的Response块
+        match = re.search(
+            r"Reasoning:\s*(?P<reasoning>.+?)\s*Action:\s*(?P<action>\d+)\s*",
+            response,
+            re.DOTALL
+        )
+
+        if not match:
+            raise ParseError(f"Invalid triage response format:\n{response}")
+
+        action_str = match.group("action").strip()
+        if not action_str.isdigit():
+            raise ParseError(f"Non-numeric action: {action_str}")
+
+        return (
+            match.group("reasoning").strip(),
+            int(action_str)
+        )
+
     def _parse_leaf(self, response:str):
-        """  
-        Parse叶NodeResponse，Return/Back(reasoning, action, answer)    
-        """  
-        # MatchFormat化的Response块    
-        match = re.search(  
-            r"\s*Reasoning:\s*(?P<reasoning>.+?)\s*Action:\s*(?P<action>-1|-2)\s*(Answer:\s*(?P<answer>.*))",  
-            response,  
-            re.DOTALL  
-        )  
-        
-        if not match:  
-            raise ParseError(f"Invalid leaf response format:\n{response}")  
-            
-        action = int(match.group("action"))  
-        answer = match.group("answer").strip() if match.group("answer") else None  
-        
-        # Verify/Validate逻辑    
-        if action == -2 and not answer:  
-            raise ParseError("Action -2 requires an answer")  
-        if action == -1 and answer:  
-            raise ParseError("Action -1 cannot have an answer")  
-            
-        return (  
-            match.group("reasoning").strip(),  
-            action,  
-            answer  
-        )  
-    
-    
+        """
+        Parse叶NodeResponse，Return/Back(reasoning, action, answer)
+        """
+        # MatchFormat化的Response块
+        match = re.search(
+            r"\s*Reasoning:\s*(?P<reasoning>.+?)\s*Action:\s*(?P<action>-1|-2)\s*(Answer:\s*(?P<answer>.*))",
+            response,
+            re.DOTALL
+        )
+
+        if not match:
+            raise ParseError(f"Invalid leaf response format:\n{response}")
+
+        action = int(match.group("action"))
+        answer = match.group("answer").strip() if match.group("answer") else None
+
+        # Verify/Validate逻辑
+        if action == -2 and not answer:
+            raise ParseError("Action -2 requires an answer")
+        if action == -1 and answer:
+            raise ParseError("Action -1 cannot have an answer")
+
+        return (
+            match.group("reasoning").strip(),
+            action,
+            answer
+        )
+
+
     def _save_work_memory(self, node:MemoryTreeNode, action):
         self.working_memory.append(node.children[action].content[:200])
         print("===================================")
         print("Save a child node to the working memory, node info:")
         node.children[action].print_node_info()
         print("=====================================")
-        
-    
-    def _find_unvisited_child(self, nodes):  
-        """论文3.2节：寻找未访问的子Node"""    
-        for node in nodes:  
-            if node not in self.visited:  
-                return node  
-        return None  
-
-    # async def _call_model(self, prompt: ChatPromptTemplate, inputs: Dict, model_type: Literal["api", "huggingface"]) -> str:
-    #     if model_type == "api":
-    #         client = ZhipuAI(api_key=os.getenv("ZHIPU_API_KEY"))
-    #         response = client.chat.completions.create(
-    #             model="glm-4",
-    #             messages=[{"role": "user", "content": prompt.format(**inputs)}]
-    #         )
-    #         return response.choices[0].message.content
-    #     elif model_type == "huggingface":
-    #         llm = HuggingFacePipeline.from_model_id(
-    #             model_id=MODEL_PATH,
-    #             task="text-generation",
-    #             max_new_tokens=1000,
-    #         )
-    #         chain = LLMChain(llm=llm, prompt=prompt)
-    #         return await chain.arun(inputs)
-    #     else:
-    #         raise ValueError("Invalid model_type, please choose either 'api' or 'huggingface'")
 
 
-
+    def _find_unvisited_child(self, nodes):
+        for node in nodes:
+            if node not in self.visited:
+                return node
+        return None
 
 
 
 class ChatPDFForMemWalker(ChatPDF):
-    def __init__(self, *args, **kwargs):  
-        super().__init__(*args, **kwargs)  
-        self.all_chunks:List[Document] = []  # Storage分块Result    
-        
-    def ingest_all(self, pdf_folder_path: str):  
-        """Override父ClassMethod以Storage分块Result"""    
-        self.all_chunks = []  
-        for file_name in os.listdir(pdf_folder_path):  
-            if file_name.endswith(".pdf"):  
-                file_path = os.path.join(pdf_folder_path, file_name)  
-                docs = PyPDFLoader(file_path=file_path).load()  
-                chunks = self.text_spliter.split_documents(docs)  
-                chunks = filter_complex_metadata(chunks)  
-                self.all_chunks.extend(chunks)  
-        
-        # InitializeVectorStorage（Keep/Maintain原有Function/Feature）    
-        self.vector_store = Chroma.from_documents(  
-            documents=self.all_chunks,   
-            # embedding=FastEmbedEmbeddings(model_name = "BAAI/bge-small-en-v1.5")   # Note/Attention，这玩意儿不Support本地Path  
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.all_chunks:List[Document] = []  # Storage分块Result
+
+    def ingest_all(self, pdf_folder_path: str):
+        """Override父ClassMethod以Storage分块Result"""
+        self.all_chunks = []
+        for file_name in os.listdir(pdf_folder_path):
+            if file_name.endswith(".pdf"):
+                file_path = os.path.join(pdf_folder_path, file_name)
+                docs = PyPDFLoader(file_path=file_path).load()
+                chunks = self.text_spliter.split_documents(docs)
+                chunks = filter_complex_metadata(chunks)
+                self.all_chunks.extend(chunks)
+
+        # InitializeVectorStorage（Keep/Maintain原有Function/Feature）
+        self.vector_store = Chroma.from_documents(
+            documents=self.all_chunks,
+            # embedding=FastEmbedEmbeddings(model_name = "BAAI/bge-small-en-v1.5")   # Note/Attention，这玩意儿不Support本地Path
             embedding=HuggingFaceEmbeddings(
                 model_name=EMBEDDING_MODEL_PATH,
-                model_kwargs={'device': 'cpu'},  # 或 'cpu'    
-                encode_kwargs={'normalize_embeddings': True}  
-                
+                model_kwargs={'device': 'cpu'},  # 或 'cpu'
+                encode_kwargs={'normalize_embeddings': True}
+
                 )
-        )  
-        self.retriever = self.vector_store.as_retriever(  
-            search_type="similarity_score_threshold",  
-            search_kwargs={"k": 5, "score_threshold": 0.5}  
-        )  
-    
-    def get_memwalker_chunks(self) -> List[Document]:  
-        """Fetch适用于MEMWALKER的分块Documentation"""    
-        return [  
-            Document(  
-                page_content=chunk.page_content,  
-                metadata={"source": chunk.metadata.get("source", "")}  
-            ) for chunk in self.all_chunks  
-        ]  
+        )
+        self.retriever = self.vector_store.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={"k": 5, "score_threshold": 0.5}
+        )
 
-
-
-
-
-
+    def get_memwalker_chunks(self) -> List[Document]:
+        return [
+            Document(
+                page_content=chunk.page_content,
+                metadata={"source": chunk.metadata.get("source", "")}
+            ) for chunk in self.all_chunks
+        ]
 
 
 async def main():
     # InitializeBuilder
     builder = MemoryTreeBuilder()
-    
-    # BuildMemoryTree
-    # with open("long_text.txt") as f:
-    #     text = f.read()
-    
+
     pdf_reader = ChatPDFForMemWalker()
     pdf_reader.ingest_all(pdf_folder_path="src/agents/travel_knowledge/tour_pdfs")
     all_chunks  = pdf_reader.get_memwalker_chunks()
     root = await builder.build_tree(all_chunks, model_type="api")
-    
+
     builder.print_memory_tree(root)
-    
- 
+
+
     navigator = Navigator(model_type="api")
-    answer = await navigator.navigate(root, "如果我只有3天False期，我应该在广州怎么玩Compare好？")  
+    answer = await navigator.navigate(root, "如果我只有5天假期，我应该在重庆怎么玩比较好？")
     print("Final Answer:", answer)
-    
-    
-    '''
-    async关Key字用于DefinitionAsynchronousFunction（也称为Coroutine）。在您提供的代码Medium，async def build_treeDefinition了一个AsynchronousMethod。它的Major作用Package括：  
-
-        非BlockerExecute：AsynchronousFunctionAllow/Permit程序在WaitI/OOperate（如NetworkRequest、File读写等）时，可以Pause当前Task并Execute其他Task，而不Yes/IsBlocker整个程序。  
-
-        提High效率：在Process大量I/O密集型Task时，Asynchronous编程可以显著提High程序的Execute效率，因为它可以同时Process多个Task，而不Yes/IsOrderExecute。  
-
-        与await配合Usage：在AsynchronousFunction内部，可以Usageawait关Key字来Wait其他AsynchronousOperateComplete/Finish。例如在build_treeMethodMedium，await self._create_leaf_nodes和await self._summarize_nodes就Yes/IsWait这些AsynchronousOperateComplete/Finish。  
-    
-    '''
-    
-    
-
-
 
 if __name__ == "__main__":
     import asyncio

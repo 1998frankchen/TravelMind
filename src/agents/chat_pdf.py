@@ -157,7 +157,5 @@ if __name__ == "__main__":
     
     agent.ingest("travel_knowledge\\tour_pdfs")
 
-    print(agent.ask("Help me plan a 3-day trip to Shanghai."))  
-
-
+    print(agent.ask("Help me plan a 5-day trip to Chongqing."))  
 
